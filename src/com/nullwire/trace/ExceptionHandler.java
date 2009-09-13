@@ -26,6 +26,7 @@ Contributors:
 Mads Kristiansen, mads.kristiansen@nullwire.com
 Glen Humphrey
 Evan Charlton
+Peter Hewitt
 */
 
 package com.nullwire.trace;
@@ -72,7 +73,11 @@ public class ExceptionHandler {
 			// Package name
 			G.APP_PACKAGE = pi.packageName;
 			// Files dir for storing the stack traces
-			G.FILES_PATH = context.getFilesDir().getAbsolutePath();			
+			G.FILES_PATH = context.getFilesDir().getAbsolutePath();
+			// Device model
+            G.PHONE_MODEL = android.os.Build.MODEL;
+            // Android version
+            G.ANDROID_VERSION = android.os.Build.VERSION.RELEASE;
 		} catch (NameNotFoundException e) {
 			e.printStackTrace();
 		}
@@ -94,11 +99,18 @@ public class ExceptionHandler {
 			public void run() {
 				// First of all transmit any stack traces that may be lying around
 				submitStackTraces();
-				// Register default exceptions handler
-		    	Thread.setDefaultUncaughtExceptionHandler(
-		                new DefaultExceptionHandler(Thread.getDefaultUncaughtExceptionHandler()));			
+				UncaughtExceptionHandler currentHandler = Thread.getDefaultUncaughtExceptionHandler();
+				if (currentHandler != null) {
+					Log.d(TAG, "current handler class="+currentHandler.getClass().getName());
+				}	
+				// don't register again if already registered
+				if (!(currentHandler instanceof DefaultExceptionHandler)) {
+					// Register default exceptions handler
+					Thread.setDefaultUncaughtExceptionHandler(
+							new DefaultExceptionHandler(currentHandler));
+				}
 			}
-		}.start();
+       	}.start();
 		
 		return stackTracesFound;
 	}
@@ -156,10 +168,20 @@ public class ExceptionHandler {
 					StringBuilder contents = new StringBuilder();
 					BufferedReader input =  new BufferedReader(new FileReader(filePath));
 					String line = null;
-			        while (( line = input.readLine()) != null){
-			            contents.append(line);
+					String androidVersion = null;
+	                String phoneModel = null;
+	                while (( line = input.readLine()) != null){
+                        if (androidVersion == null) {
+                            androidVersion = line;
+                            continue;
+                        }
+                        else if (phoneModel == null) {
+                            phoneModel = line;
+                            continue;
+                        }
+                        contents.append(line);
 			            contents.append(System.getProperty("line.separator"));
-			          }
+			        }
 			        input.close();
 			        String stacktrace;
 			        stacktrace = contents.toString();
@@ -170,7 +192,9 @@ public class ExceptionHandler {
 					List <NameValuePair> nvps = new ArrayList <NameValuePair>(); 
 					nvps.add(new BasicNameValuePair("package_name", G.APP_PACKAGE));
 					nvps.add(new BasicNameValuePair("package_version", version));
-					nvps.add(new BasicNameValuePair("stacktrace", stacktrace));
+                    nvps.add(new BasicNameValuePair("phone_model", phoneModel));
+                    nvps.add(new BasicNameValuePair("android_version", androidVersion));
+                    nvps.add(new BasicNameValuePair("stacktrace", stacktrace));
 					httpPost.setEntity(new UrlEncodedFormEntity(nvps, HTTP.UTF_8)); 
 					// We don't care about the response, so we just hope it went well and on with it
 					httpClient.execute(httpPost);					

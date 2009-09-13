@@ -26,6 +26,7 @@ Contributors:
 Mads Kristiansen, mads.kristiansen@nullwire.com
 Glen Humphrey
 Evan Charlton
+Peter Hewitt
 */
 
 package com.nullwire.trace;
@@ -67,7 +68,9 @@ public class DefaultExceptionHandler implements UncaughtExceptionHandler {
 	    	Log.d(TAG, "Writing unhandled exception to: " + G.FILES_PATH+"/"+filename+".stacktrace");
 		    // Write the stacktrace to disk
 	    	BufferedWriter bos = new BufferedWriter(new FileWriter(G.FILES_PATH+"/"+filename+".stacktrace"));
-		    bos.write(result.toString());
+            bos.write(G.ANDROID_VERSION + "\n");
+            bos.write(G.PHONE_MODEL + "\n");
+            bos.write(result.toString());
 		    bos.flush();
 		    // Close up everything
 		    bos.close();
