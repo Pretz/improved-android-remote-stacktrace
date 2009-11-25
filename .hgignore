@@ -2,3 +2,4 @@ i*\.class$
 bin/*
 trace.jar
 MANIFEST.MF
+.DS_Store
