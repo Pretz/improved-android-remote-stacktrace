@@ -27,191 +27,303 @@ Mads Kristiansen, mads.kristiansen@nullwire.com
 Glen Humphrey
 Evan Charlton
 Peter Hewitt
+Alex Pretzlav, alex@turnlav.net
 */
 
 package com.nullwire.trace;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FilenameFilter;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HTTP;
-
 import android.content.Context;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.text.TextUtils;
 import android.util.Log;
 
-public class ExceptionHandler {
-	
-	public static String TAG = "com.nullwire.trace.ExceptionsHandler";
-	
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.ArrayList;
+
+/**
+ * An exception handler that records the exception stacktrace to a file
+ * for sending to Analytics.
+ *
+ * Largely based on the android-remote-stacktrace project:
+ * http://code.google.com/p/android-remote-stacktrace/
+ * 
+ * Improvements over the original android-remote-stacktrace:
+ * 
+ * Stacktraces are written to their own "stacktraces" folder
+ * instead of the root documents folder of the application.
+ * 
+ * The method of sending stacktraces is customizable. Instead of
+ * always POSTing to a server, a StackInfoSender can be provided
+ * to perform custom handling of stack traces.
+ * 
+ * Stack filenames will never collide, unlike android-remote-stacktrace
+ * which generated random numbers in the hope they wouldn't collide.
+ * 
+ * This version provides more fine-grained customization of logging and
+ * 
+ * @author 
+ * Contributors: 
+ * Mads Kristiansen, mads.kristiansen@nullwire.com
+ * Glen Humphrey
+ * Evan Charlton
+ * Peter Hewitt
+ * Alex Pretzlav, alex@turnlav.net
+ *
+ */
+public class ExceptionHandler implements UncaughtExceptionHandler {
+
+	private final UncaughtExceptionHandler mDefaultExceptionHandler;
+	private final String mFilePath;
+	private final String mAppVersion;
+	private final boolean mDebug;
+
+	private static final String TAG = "CollectingExceptionHandler";
+
 	private static String[] stackTraceFileList = null;
 	
 	/**
+	 * Call this from each thread that should submit stack traces when it crashes.
+	 * This method creates an <code>HttpPostStackInfoSender</info> for the supplied URL,
+	 * and disables debug.
+	 * @param context
+	 * @param url The url to POST stack traces to.
+	 * @return
+	 */
+	public static boolean register(Context context, String url) {
+		return register(context, new HttpPostStackInfoSender(url), false);
+	}
+
+	/**
 	 * Register handler for unhandled exceptions.
 	 * @param context
+	 * @param stackInfoSender A sender to handle any stack traces recorded on the device.
+	 * @param debug If true, extra debug information will be logged and the application
+	 * version sent with stacktraces will have 'DEBUG-' prepended to it.
+	 *
+	 * This method has been slightly modified from the android-remote-stacktrace
+	 * version to not rely on global static state.
+	 *
+	 * @author pretz/android-remote-stacktrace
 	 */
-	public static boolean register(Context context) {
+	public static boolean register(Context context, final StackInfoSender stackInfoSender, final boolean debug) {
 		Log.i(TAG, "Registering default exceptions handler");
-		// Get information about the Package
-		PackageManager pm = context.getPackageManager();
+		// Files dir for storing the stack trace
+		final String filePath = context.getDir("stacktraces", 0).getAbsolutePath();
+		PackageInfo packageInfo = null;
 		try {
-			PackageInfo pi;
-			// Version
-			pi = pm.getPackageInfo(context.getPackageName(), 0);
-			G.APP_VERSION = pi.versionName;
-			// Package name
-			G.APP_PACKAGE = pi.packageName;
-			// Files dir for storing the stack traces
-			G.FILES_PATH = context.getFilesDir().getAbsolutePath();
-			// Device model
-            G.PHONE_MODEL = android.os.Build.MODEL;
-            // Android version
-            G.ANDROID_VERSION = android.os.Build.VERSION.RELEASE;
+			packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
 		} catch (NameNotFoundException e) {
 			e.printStackTrace();
+			return false;
 		}
+		final String appVersion = packageInfo.versionName;
 
-		Log.i(TAG, "TRACE_VERSION: " + G.TraceVersion);
-		Log.d(TAG, "APP_VERSION: " + G.APP_VERSION);
-		Log.d(TAG, "APP_PACKAGE: " + G.APP_PACKAGE);
-		Log.d(TAG, "FILES_PATH: " + G.FILES_PATH);
-		Log.d(TAG, "URL: " + G.URL);
-		
 		boolean stackTracesFound = false;
 		// We'll return true if any stack traces were found
-		if ( searchForStackTraces().length > 0 ) {
+		if (searchForStackTraces(filePath).length > 0) {
 			stackTracesFound = true;
 		}
-		
+
+		// First of all transmit any stack traces that may be lying around
+		// This must be called from the UI thread as it may trigger an analytics flush
+		submitStackTraces(filePath, stackInfoSender, debug, packageInfo.packageName);
+
 		new Thread() {
 			@Override
 			public void run() {
-				// First of all transmit any stack traces that may be lying around
-				submitStackTraces();
 				UncaughtExceptionHandler currentHandler = Thread.getDefaultUncaughtExceptionHandler();
-				if (currentHandler != null) {
-					Log.d(TAG, "current handler class="+currentHandler.getClass().getName());
-				}	
+				if (debug) {
+					if (currentHandler != null) {
+						Log.d(TAG, "current handler class=" + currentHandler.getClass().getName());
+					}
+				}
 				// don't register again if already registered
-				if (!(currentHandler instanceof DefaultExceptionHandler)) {
+				if (!(currentHandler instanceof ExceptionHandler)) {
 					// Register default exceptions handler
 					Thread.setDefaultUncaughtExceptionHandler(
-							new DefaultExceptionHandler(currentHandler));
+							new ExceptionHandler(currentHandler, appVersion, filePath, debug));
 				}
 			}
-       	}.start();
-		
+		}.start();
+
 		return stackTracesFound;
 	}
-	
-	/**
-	 * Register handler for unhandled exceptions.
-	 * @param context
-	 * @param Url
-	 */
-	public static void register(Context context, String url) {
-		Log.i(TAG, "Registering default exceptions handler: " + url);
-		// Use custom URL
-		G.URL = url;
-		// Call the default register method
-		register(context);
-	}
 
-	
 	/**
-	 * Search for stack trace files.
+	 * Search for stack trace files.  This method is unchanged
+	 * from android-remote-stacktrace
 	 * @return
 	 */
-	private static String[] searchForStackTraces() {
-		if ( stackTraceFileList != null ) {
+	private static String[] searchForStackTraces(String filePath) {
+		if (stackTraceFileList != null) {
 			return stackTraceFileList;
 		}
-		File dir = new File(G.FILES_PATH + "/");
+		File dir = new File(filePath + "/");
 		// Try to create the files folder if it doesn't exist
-		dir.mkdir();
-		// Filter for ".stacktrace" files
-		FilenameFilter filter = new FilenameFilter() { 
-			public boolean accept(File dir, String name) {
-				return name.endsWith(".stacktrace"); 
-			} 
-		}; 
-		return (stackTraceFileList = dir.list(filter));	
+		dir.mkdirs();
+		return (stackTraceFileList = dir.list());
 	}
-	
+
 	/**
 	 * Look into the files folder to see if there are any "*.stacktrace" files.
-	 * If any are present, submit them to the trace server.
+	 * If any are present, submit them to the stackInfoSender
+	 *
+	 * This method has been modified from the original android-remote-stacktrace
+	 * version to use a StackInfoSender and not to rely on global state.
+	 *
+	 * @param filesPath The path to search for stack traces
+	 * @param stackInfoSender The StackInfoSender to use for StackInfos collected from filesPath.  
+	 *
+	 * @author pretz/android-remote-stacktrace
 	 */
-	public static void submitStackTraces() {
+	private static void submitStackTraces(String filesPath, StackInfoSender stackInfoSender,
+			boolean debug, String packageName) {
 		try {
-			Log.d(TAG, "Looking for exceptions in: " + G.FILES_PATH);
-			String[] list = searchForStackTraces();
-			if ( list != null && list.length > 0 ) {
-				Log.d(TAG, "Found "+list.length+" stacktrace(s)");
-				for (int i=0; i < list.length; i++) {
-					String filePath = G.FILES_PATH+"/"+list[i];
-					// Extract the version from the filename: "packagename-version-...."
-					String version = list[i].split("-")[0];
-					Log.d(TAG, "Stacktrace in file '"+filePath+"' belongs to version " + version);
-					// Read contents of stacktrace
-					StringBuilder contents = new StringBuilder();
-					BufferedReader input =  new BufferedReader(new FileReader(filePath));
-					String line = null;
-					String androidVersion = null;
-	                String phoneModel = null;
-	                while (( line = input.readLine()) != null){
-                        if (androidVersion == null) {
-                            androidVersion = line;
-                            continue;
-                        }
-                        else if (phoneModel == null) {
-                            phoneModel = line;
-                            continue;
-                        }
-                        contents.append(line);
-			            contents.append(System.getProperty("line.separator"));
-			        }
-			        input.close();
-			        String stacktrace;
-			        stacktrace = contents.toString();
-			        Log.d(TAG, "Transmitting stack trace: " + stacktrace);
-			        // Transmit stack trace with POST request
-					DefaultHttpClient httpClient = new DefaultHttpClient(); 
-					HttpPost httpPost = new HttpPost(G.URL);
-					List <NameValuePair> nvps = new ArrayList <NameValuePair>(); 
-					nvps.add(new BasicNameValuePair("package_name", G.APP_PACKAGE));
-					nvps.add(new BasicNameValuePair("package_version", version));
-                    nvps.add(new BasicNameValuePair("phone_model", phoneModel));
-                    nvps.add(new BasicNameValuePair("android_version", androidVersion));
-                    nvps.add(new BasicNameValuePair("stacktrace", stacktrace));
-					httpPost.setEntity(new UrlEncodedFormEntity(nvps, HTTP.UTF_8)); 
-					// We don't care about the response, so we just hope it went well and on with it
-					httpClient.execute(httpPost);					
-				}
+			if (debug) {
+				Log.d(TAG, "Looking for exceptions in: " + filesPath);
 			}
-		} catch( Exception e ) {
-			e.printStackTrace();
+			String[] list = searchForStackTraces(filesPath);
+			if ( list != null && list.length > 0 ) {
+				if (debug) {
+					Log.d(TAG, "Found " + list.length + " stacktrace(s)");
+				}
+				ArrayList<StackInfo> stackInfos = new ArrayList<StackInfo>(list.length);
+				for (int i=0; i < list.length; i++) {
+					String filePath = filesPath + "/" + list[i];
+					// Extract the version from the filename: "packagename-version-...."
+					String version = list[i].substring(0, list[i].lastIndexOf('-')); 
+					if (debug) {
+						Log.d(TAG, "Stacktrace in file '" + filePath + "' belongs to version " + version);
+					}
+					// Read contents of stacktrace
+					ArrayList<String> stack = new ArrayList<String>(10);
+					BufferedReader input =  new BufferedReader(new FileReader(filePath));
+					String phoneModel = null;
+					String buildVersion = null;
+					String exceptionType = null;
+					try {
+						String line = null;
+						while ((line = input.readLine()) != null) {
+							if (phoneModel == null) {
+								phoneModel = line;
+								continue;
+							} else if (buildVersion == null) {
+								buildVersion = line;
+								continue;
+							} else if (exceptionType == null) {
+								exceptionType = line;
+								continue;
+							} else {
+								stack.add(line);								
+							}
+						}
+					} finally {
+						input.close();
+					}
+					if (debug) {
+						Log.d(TAG, "Transmitting stack trace: " + TextUtils.join("\n", stack));
+					}
+					stackInfos.add(new StackInfo(version, phoneModel, buildVersion, exceptionType, stack));
+				}
+				stackInfoSender.submitStackInfos(stackInfos, packageName);
+			}
+		} catch (FileNotFoundException e) {
+			if (debug) {
+				Log.i(TAG, "didn't find any stack traces", e);
+			}
+		} catch (IOException e) {
+			Log.w(TAG, "Problem closing files", e);
+		} catch (Exception e) {
+			Log.e(TAG, "Something really bad just happened that we weren't expecting", e);
 		} finally {
 			try {
-				String[] list = searchForStackTraces();
-				for ( int i = 0; i < list.length; i ++ ) {
-					File file = new File(G.FILES_PATH+"/"+list[i]);
-					file.delete();
+				for (File stack : new File(filesPath + "/").listFiles()) {
+					if (debug) {
+						Log.v(TAG, "Deleting stack at: " + stack.getAbsolutePath());
+					}
+					stack.delete();
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+		}
+	}
+
+	/**
+	 * @param defaultExceptionHandler The original exception handler that this handler should forward through after recording a crash.
+	 * @param appVersion The version of the application to log with any crashes
+	 * @param filePath The path to write stack information to
+	 * @param debug Whether to perform extra debug logging and submit the application version with DEBUG- prepended.
+	 */
+	public ExceptionHandler(UncaughtExceptionHandler defaultExceptionHandler, 
+			String appVersion, String filePath, boolean debug) {
+		mDefaultExceptionHandler = defaultExceptionHandler;
+		mFilePath = filePath;
+		mDebug = debug;
+		if (mDebug) {
+			mAppVersion = "DEBUG-" + appVersion;
+		} else {
+			mAppVersion = appVersion;
+		}
+	}
+
+	// Default exception handler
+	public void uncaughtException(Thread t, Throwable e) {
+		try {
+			File dir = new File(mFilePath);
+			if (dir.list().length > 20) {
+				// Too many stacks, skip
+				if (mDefaultExceptionHandler != null) {
+					mDefaultExceptionHandler.uncaughtException(t, e);
+				}
+				return;
+			}
+
+			// Walk through potential filenames until we find an unused one (should rarely loop)
+			File file = null;
+			int count = 0;
+			do {
+				String filename = mAppVersion + "-" + Integer.toString(count);
+				file = new File(mFilePath + "/" + filename + ".stacktrace");
+				count++;
+			} while (file.exists());
+
+			if (mDebug) {
+				Log.d(TAG, "Writing unhandled exception to: " + file.getAbsolutePath());
+			}
+			// Write the stacktrace to disk
+			FileOutputStream stream = new FileOutputStream(file);
+			final PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(stream));
+			printWriter.print(android.os.Build.MODEL);
+			printWriter.print("\n");
+			printWriter.print(android.os.Build.VERSION.RELEASE);
+			printWriter.print("\n");
+			printWriter.print(e.getClass().getCanonicalName());
+			printWriter.print("\n");
+			e.printStackTrace(printWriter);
+			printWriter.flush();
+			stream.getFD().sync();
+			// Close up everything
+			printWriter.close();
+			if (mDebug) {
+				Log.d(TAG, "saved stacktrace to file", e);
+			}
+		} catch (Exception ebos) {
+			// Nothing much we can do about this - the game is over
+			Log.e(TAG, "Exception thrown while logging stack trace", ebos);
+		}
+		// Call original handler
+		if (mDefaultExceptionHandler != null) {
+			mDefaultExceptionHandler.uncaughtException(t, e);
 		}
 	}
 }

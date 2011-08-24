@@ -4,3 +4,5 @@ trace.jar
 MANIFEST.MF
 .DS_Store
 server/site.db
+gen/*
+local.properties

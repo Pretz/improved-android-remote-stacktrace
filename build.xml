@@ -1,89 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="android_remote_stacktrace" default="help">
+
+<!-- The local.properties file is created and updated by the 'android'
+     tool.
+     It contains the path to the SDK. It should *NOT* be checked into
+     Version Control Systems. -->
+    <property file="local.properties" />
+
+    <!-- The build.properties file can be created by you and is never touched
+         by the 'android' tool. This is the place to change some of the
+         default property values used by the Ant rules.
+         Here are some properties you may want to change/update:
+
+         source.dir
+             The name of the source directory. Default is 'src'.
+         out.dir
+             The name of the output directory. Default is 'bin'.
+
+         Properties related to the SDK location or the project target should
+         be updated using the 'android' tool with the 'update' action.
+
+         This file is an integral part of the build system for your
+         application and should be checked into Version Control Systems.
+
+         -->
+    <property file="build.properties" />
+
+    <!-- The default.properties file is created and updated by the 'android'
+         tool, as well as ADT.
+         This file is an integral part of the build system for your
+         application and should be checked into Version Control Systems. -->
+    <property file="default.properties" />
+
+
+    <!-- Required pre-setup import -->
+    <import file="${sdk.dir}/tools/ant/pre_setup.xml" />
+
+
+<!-- extension targets. Uncomment the ones where you want to do custom work
+     in between standard targets -->
 <!--
-Copyright (c) <year> <copyright holders>
+    <target name="-pre-build">
+    </target>
+    <target name="-pre-compile">
+    </target>
 
-Permission is hereby granted, free of charge, to any person
-obtaining a copy of this software and associated documentation
-files (the "Software"), to deal in the Software without
-restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
-
-Contributors: 
-Mads Kristiansen, mads.kristiansen@nullwire.com
-Glen Humphrey
-Evan Charlton
-Peter Hewitt
+    [This is typically used for code obfuscation.
+     Compiled code location: ${out.classes.absolute.dir}
+     If this is not done in place, override ${out.dex.input.absolute.dir}]
+    <target name="-post-compile">
+    </target>
 -->
 
-<project default="package">
-  <property name="version.num" value="0.3.0" />
-  <buildnumber file="build.num" />
-  <property name="lib.dir" value="../android/platforms/android-1.5/" />
-  <property name="build.dir" value="./build"/>
-  <property name="classes.dir" 	value="${build.dir}/classes"/>
+    <!-- Execute the Android Setup task that will setup some properties
+         specific to the target, and import the build rules files.
 
-  <path id="classpath">
-    <fileset dir="${lib.dir}" includes="**/*.jar" />
-  </path>
+         The rules file is imported from
+            <SDK>/tools/ant/
+         Depending on the project type it can be either:
+         - main_rules.xml
+         - lib_rules.xml
+         - test_rules.xml
 
-  <target name="stamp-version">
-	<delete file="src/com/nullwire/trace/G.java" quiet="true" />
-  	<copy file="src/com/nullwire/trace/G.template"
-		  tofile="src/com/nullwire/trace/G.java">
-      <filterchain>
-        <replacetokens>
-          <token key="__TRACEVERSION__"
-                 value="${version.num}" />
-        </replacetokens>
-      </filterchain>  	
-	</copy>
-  </target>
-	
-  <target name="compile">
-    <mkdir dir="${build.dir}" />
-    <mkdir dir="${classes.dir}" />
-    <javac srcdir="." destdir="${classes.dir}" classpathref="classpath" />
-  </target>
-  
-  <target name="jar" depends="compile">
+         To customize existing targets, there are two options:
+         - Customize only one target:
+             - copy/paste the target into this file, *before* the
+               <setup> task.
+             - customize it to your needs.
+         - Customize the whole script.
+             - copy/paste the content of the rules files (minus the top node)
+               into this file, *after* the <setup> task
+             - disable the import of the rules by changing the setup task
+               below to <setup import="false" />.
+             - customize to your needs.
+    -->
+    <setup />
 
-     <delete file="trace.jar" />
-     <delete file="MANIFEST.MF" />
-     <manifest file="MANIFEST.MF">
-        <attribute name="Built-By" value="${user.name}" />
-        <attribute name="Implementation-Version" 
-                     value="${version.num}-b${build.number}"/> 
-    </manifest>
-
-    <jar destfile="trace.jar"
-         basedir="build/classes"
-         includes="**/*.class"
-         manifest="MANIFEST.MF"
-         />
-  </target>
-
-  <target name="clean">
-       <delete dir="build" />
-       <delete>
-         <fileset dir="." includes="trace.jar*"/>
-         <fileset file="MANIFEST.MF"/>
-       </delete>  
-  </target>
-  
-  <target name="package" depends="stamp-version,compile,jar" />
 </project>
-
