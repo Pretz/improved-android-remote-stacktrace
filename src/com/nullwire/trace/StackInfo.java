@@ -26,35 +26,35 @@ public class StackInfo {
 	}
 	
 	/**
-	 * @return The version string of the application at the time of the crash.
+	 * The version string of the application at the time of the crash.
 	 */
 	public String getPackageVersion() {
 		return mPackageVersion;
 	}
 	
 	/**
-	 * @return The phone model as set in <code>android.os.Build.MODEL</code>.
+	 * The phone model as set in <code>android.os.Build.MODEL</code>.
 	 */
 	public String getPhoneModel() {
 		return mPhoneModel;
 	}
 	
 	/**
-	 * @return The version of android as stored in <code>android.os.Build.VERSION.RELEASE</code> at the time of crash.
+	 * The version of android as stored in <code>android.os.Build.VERSION.RELEASE</code> at the time of crash.
 	 */
 	public String getAndroidVersion() {
 		return mAndroidVersion;
 	}
 	
 	/**
-	 * @return The separate lines of the stacktrace as a list of strings.
+	 * The separate lines of the stacktrace as a list of strings.
 	 */
 	public List<String> getStacktrace() {
 		return mStacktrace;
 	}
 	
 	/**
-	 * @return The type of the topmost exception as a fully qualified name, such as <code>java.lang.RuntimeException</code>.
+	 * The type of the topmost exception as a fully qualified name, such as <code>java.lang.RuntimeException</code>.
 	 */
 	public String getExceptionType() {
 		return mExceptionType;

@@ -7,6 +7,8 @@ This project is fork of [Android Remote Stacktrace][1] which adds a number of im
  * Behaves better with the filesystem by saving stacktraces to their own directory, instead of your application's root documents directory
  * Allows optional debug logging, which will also mark your application as a DEBUG build in stack traces
 
+See also: [javadoc](http://pretz.github.com/improved-android-remote-stacktrace/javadoc/)
+
 What follows is the original documentation for Android Remote Stacktrace, with small modifications for the few API changes made by me.
 
 ## Client side usage
@@ -31,6 +33,8 @@ Or, using your own handler:
 ExceptionHandler.register(this, new MyFancyExceptionSender(), isDebugEnabled);
 ```
 
+If you wish to implement your own StackInfoSender, see the [javadoc documentation](http://pretz.github.com/improved-android-remote-stacktrace/javadoc/index.html?com/nullwire/trace/StackInfoSender.html) for the interface.
+
 ## Server side installation
 
 If you would like to store your stack traces on your own server, you will have to register the exception handler like this:
@@ -39,7 +43,7 @@ If you would like to store your stack traces on your own server, you will have t
 ExceptionHandler.register(this, "http://your.domain/path"); 
 ```
 
-At `http://your.domain/path` the client side implementation will expect to find [this simple PHP script](https://github.com/Pretz/improved-android-remote-stacktrace/blob/server/collect/server.php), which will take three POST parameters: 'package_name', 'package_version' and 'stacktrace'. The collected data is simply stored in a plain text file. You can extend the script to send you an email with the stack trace if you like - just uncomment the last line and change the email address.
+At `http://your.domain/path` the client side implementation will expect to find [this simple PHP script](https://github.com/Pretz/improved-android-remote-stacktrace/blob/master/server/collect/server.php), which will take three POST parameters: 'package_name', 'package_version' and 'stacktrace'. The collected data is simply stored in a plain text file. You can extend the script to send you an email with the stack trace if you like - just uncomment the last line and change the email address.
 
 ## Building the JAR
 

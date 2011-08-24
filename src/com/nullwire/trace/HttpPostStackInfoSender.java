@@ -21,15 +21,17 @@ import java.util.List;
 /**
  * A StackInfoSender that performs an individual http POST to a URL for each
  * stack info provided. The http requests will be performed inside of a single
- * AsyncTask, so submitStackInfos must be called from the main thread.
+ * <code>AsyncTask</code>, so submitStackInfos must be called from the main thread.
  *  
  * The data sent is identical to the data sent in
  * the original android-remote-stacktrace:
- * * package_name
- * * package_version
- * * phone_model
- * * android_version
- * * stacktrace
+ * <ul>
+ * <li>package_name
+ * <li>package_version
+ * <li>phone_model
+ * <li>android_version
+ * <li>stacktrace
+ * </ul>
  * 
  * @author pretz
  *
@@ -42,8 +44,7 @@ public class HttpPostStackInfoSender implements StackInfoSender {
 	
 	/**
 	 * Construct a new HttpPostStackInfoSender that will submit
-	 * stack traces by POSTing them to the specified URL.
-	 * @param postUrl
+	 * stack traces by POSTing them to postUrl.
 	 */
 	public HttpPostStackInfoSender(String postUrl) {
 		mPostUrl = postUrl;

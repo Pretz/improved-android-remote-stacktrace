@@ -53,31 +53,27 @@ import java.util.ArrayList;
  * An exception handler that records the exception stacktrace to a file
  * for sending to Analytics.
  *
- * Largely based on the android-remote-stacktrace project:
- * http://code.google.com/p/android-remote-stacktrace/
- * 
+ * Largely based on the <a href="http://code.google.com/p/android-remote-stacktrace/">android-remote-stacktrace</a> project.
+ * <p>
  * Improvements over the original android-remote-stacktrace:
- * 
- * Stacktraces are written to their own "stacktraces" folder
+ * <ul>
+ * <li>Stacktraces are written to their own "stacktraces" folder
  * instead of the root documents folder of the application.
- * 
- * The method of sending stacktraces is customizable. Instead of
+ * <li>The method of sending stacktraces is customizable. Instead of
  * always POSTing to a server, a StackInfoSender can be provided
  * to perform custom handling of stack traces.
- * 
- * Stack filenames will never collide, unlike android-remote-stacktrace
+ * <li>Stack filenames will never collide, unlike android-remote-stacktrace
  * which generated random numbers in the hope they wouldn't collide.
- * 
- * This version provides more fine-grained customization of logging and debug parameters.
- * 
- * @author 
- * Contributors: 
- * Mads Kristiansen, mads.kristiansen@nullwire.com
- * Glen Humphrey
- * Evan Charlton
- * Peter Hewitt
- * Alex Pretzlav, alex@turnlav.net
- *
+ * <li>This version provides more fine-grained customization of logging and debug parameters.
+ * </ul>
+ * <p>
+ * Contributors:<ul> 
+ * <li>Mads Kristiansen, mads.kristiansen@nullwire.com
+ * <li>Glen Humphrey
+ * <li>Evan Charlton
+ * <li>Peter Hewitt
+ * <li>Alex Pretzlav, alex@turnlav.net
+ * </ul>
  */
 public class ExceptionHandler implements UncaughtExceptionHandler {
 
@@ -94,7 +90,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 	 * Call this from each thread that should submit stack traces when it crashes.
 	 * This method creates an <code>HttpPostStackInfoSender</info> for the supplied URL,
 	 * and disables debug.
-	 * @param context
+	 * @param context Android Context to use to resolve information about the application
 	 * @param url The url to POST stack traces to.
 	 * @return
 	 */
@@ -104,13 +100,15 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 
 	/**
 	 * Register handler for unhandled exceptions.
-	 * @param context
+	 * <p>
+	 * This method has been slightly modified from the android-remote-stacktrace
+	 * version to not rely on global static state.
+	 * 
+	 * @param context Android Context to use to resolve information about the application
 	 * @param stackInfoSender A sender to handle any stack traces recorded on the device.
 	 * @param debug If true, extra debug information will be logged and the application
 	 * version sent with stacktraces will have 'DEBUG-' prepended to it.
 	 *
-	 * This method has been slightly modified from the android-remote-stacktrace
-	 * version to not rely on global static state.
 	 *
 	 * @author pretz/android-remote-stacktrace
 	 */
