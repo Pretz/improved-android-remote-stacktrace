@@ -68,7 +68,7 @@ import java.util.ArrayList;
  * Stack filenames will never collide, unlike android-remote-stacktrace
  * which generated random numbers in the hope they wouldn't collide.
  * 
- * This version provides more fine-grained customization of logging and
+ * This version provides more fine-grained customization of logging and debug parameters.
  * 
  * @author 
  * Contributors: 

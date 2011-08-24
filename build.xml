@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="android_remote_stacktrace" default="help">
+<project name="." default="help">
 
 <!-- The local.properties file is created and updated by the 'android'
      tool.
@@ -75,5 +75,13 @@
              - customize to your needs.
     -->
     <setup />
+    <path id="android.libraries.src"><path refid="project.libraries.src" /></path>
+    <path id="android.libraries.jars"><path refid="project.libraries.jars" /></path>
+
+    <target name="jar" depends="compile">
+      <jar
+          destfile="bin/trace.jar"
+          basedir="bin/classes" />
+    </target>
 
 </project>
