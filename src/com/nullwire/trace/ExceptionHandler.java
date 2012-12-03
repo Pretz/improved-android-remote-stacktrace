@@ -168,7 +168,13 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 		File dir = new File(filePath + "/");
 		// Try to create the files folder if it doesn't exist
 		dir.mkdirs();
-		return (stackTraceFileList = dir.list());
+		stackTraceFileList = dir.list();
+		if (stackTraceFileList == null) {
+			// In the cases where reading the dir fails
+			// assume there are no stack traces
+			stackTraceFileList = new String[0];
+		}
+		return stackTraceFileList;
 	}
 
 	/**
