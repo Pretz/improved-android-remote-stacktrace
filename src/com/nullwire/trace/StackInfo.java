@@ -16,6 +16,7 @@ public class StackInfo {
 	private final String mThreadName;
 	private final String mMessage;
 	private final List<StackTraceElement> mStacktrace;
+	private StackInfo mCause;
 	
 	public StackInfo(String packageVersion, String phoneModel,
 			String androidVersion, String exceptionType, String threadName, String message, List<StackTraceElement> stacktrace) {
@@ -78,5 +79,13 @@ public class StackInfo {
 	 */
 	public String getMessage() {
 		return mMessage;
+	}
+
+	public StackInfo getCause() {
+		return mCause;
+	}
+
+	void addCause(StackInfo info) {
+		mCause = info;
 	}
 }

@@ -78,6 +78,7 @@ import java.util.ArrayList;
 public class ExceptionHandler implements UncaughtExceptionHandler {
 
 	private static final String CURRENT_VERSION = "VERSION1";
+	private static final String NESTED_SET = "===CAUSED_BY===";
 	private final UncaughtExceptionHandler mDefaultExceptionHandler;
 	private final String mFilePath;
 	private final String mAppVersion;
@@ -209,8 +210,6 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 					if (debug) {
 						Log.d(TAG, "Stacktrace in file '" + filePath + "' belongs to version " + version);
 					}
-					// Read contents of stacktrace
-					ArrayList<StackTraceElement> stack = new ArrayList<StackTraceElement>(10);
 					BufferedReader input =  new BufferedReader(new FileReader(filePath));
 					String phoneModel = null;
 					String buildVersion = null;
@@ -218,12 +217,12 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 					String thread = null;
 					String message = null;
 					boolean currentVersion = false;
+					boolean hasCause = false;
+					StackInfo rootInfo = null;
+					StackInfo currentInfo = null;
 					try {
 						String line = null;
 						while ((line = input.readLine()) != null) {
-							if (debug) {
-								Log.d(TAG, "Line -" + line);
-							}
 							if (!currentVersion) {
 								currentVersion = CURRENT_VERSION.equals(line);
 								continue;
@@ -247,19 +246,35 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 							} else if (message == null) {
 								message = line;
 								continue;
-							} else {
-								String[] parts = line.split(",");
-								StackTraceElement element = new StackTraceElement(parts[0], parts[1], parts[2], Integer.valueOf(parts[3]));
-								stack.add(element);
 							}
+							if (TextUtils.equals(NESTED_SET, line)) {
+								hasCause = true;
+								message = exceptionType = null;
+								Log.e(TAG, "NESTED MARKER FOUND");
+								continue;
+							}
+							if (currentInfo == null) {
+								Log.e(TAG, "ROOT EXCEPTION for," + exceptionType);
+								rootInfo = currentInfo = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<StackTraceElement>());
+							}
+							if (hasCause) {
+								Log.e(TAG, "CREATING CAUSE cause, " + exceptionType);
+								StackInfo cause = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<StackTraceElement>());
+								currentInfo.addCause(cause);
+								currentInfo = cause;
+								hasCause = false;
+							}
+							String[] parts = line.split(",");
+							StackTraceElement element = new StackTraceElement(parts[0], parts[1], parts[2], Integer.valueOf(parts[3]));
+							currentInfo.getStacktrace().add(element);
 						}
 					} finally {
 						input.close();
 					}
 					if (debug) {
-						Log.d(TAG, "Transmitting stack trace: " + TextUtils.join("\n", stack));
+						Log.d(TAG, "Transmitting stack trace: " + TextUtils.join("\n", rootInfo.getStacktrace()));
 					}
-					stackInfos.add(new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, stack));
+					stackInfos.add(rootInfo);
 				}
 				stackInfoSender.submitStackInfos(stackInfos, packageName);
 			}
@@ -305,13 +320,13 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 
 	// Default exception handler
 	@Override
-	public void uncaughtException(Thread t, Throwable e) {
+	public void uncaughtException(final Thread thread, final Throwable exception) {
 		try {
 			File dir = new File(mFilePath);
 			if (dir.list().length > 20) {
 				// Too many stacks, skip
 				if (mDefaultExceptionHandler != null) {
-					mDefaultExceptionHandler.uncaughtException(t, e);
+					mDefaultExceptionHandler.uncaughtException(thread, exception);
 				}
 				return;
 			}
@@ -336,23 +351,31 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 			printWriter.print("\n");
 			printWriter.print(android.os.Build.VERSION.RELEASE);
 			printWriter.print("\n");
-			printWriter.print(e.getClass().getCanonicalName());
+			printWriter.print(exception.getClass().getCanonicalName());
 			printWriter.print("\n");
-			printWriter.println(t.getName());
-			printWriter.println(e.getClass().getName() + " : " + e.getMessage());
-			for (StackTraceElement element : e.getStackTrace()) {
-				printWriter.println(TextUtils.join(",", new String[] { 
-				element.getClassName(),
-				element.getMethodName(),
-				element.getFileName(),
-				String.valueOf(element.getLineNumber())}));
-			}
-			printWriter.flush();
+			printWriter.println(thread.getName());
+			Throwable throwable = exception;
+			do {
+				printWriter.println(throwable.getClass().getName() + " : " + throwable.getMessage());
+				for (StackTraceElement element : throwable.getStackTrace()) {
+					printWriter.println(TextUtils.join(",", new String[] {
+							element.getClassName(),
+							element.getMethodName(),
+							element.getFileName(),
+							String.valueOf(element.getLineNumber())}));
+				}
+				throwable = throwable.getCause();
+				if (throwable != null) {
+					printWriter.println(NESTED_SET);
+					printWriter.println(throwable.getClass().getCanonicalName());
+				}
+				printWriter.flush();
+			} while(throwable != null);
 			stream.getFD().sync();
 			// Close up everything
 			printWriter.close();
 			if (mDebug) {
-				Log.d(TAG, "saved stacktrace to file", e);
+				Log.d(TAG, "saved stacktrace to file", exception);
 			}
 		} catch (Exception ebos) {
 			// Nothing much we can do about this - the game is over
@@ -360,7 +383,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 		}
 		// Call original handler
 		if (mDefaultExceptionHandler != null) {
-			mDefaultExceptionHandler.uncaughtException(t, e);
+			mDefaultExceptionHandler.uncaughtException(thread, exception);
 		}
 	}
 }
