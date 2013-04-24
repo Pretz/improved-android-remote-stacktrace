@@ -35,7 +35,6 @@ package com.nullwire.trace;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
-import android.content.res.Resources.Theme;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -216,7 +215,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 					String buildVersion = null;
 					String exceptionType = null;
 					String thread = null;
-					String reason = null;
+					String message = null;
 					boolean currentVersion = false;
 					try {
 						String line = null;
@@ -240,8 +239,8 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 							} else if (thread == null) {
 								thread = line;
 								continue;
-							} else if (reason == null) {
-								reason = line;
+							} else if (message == null) {
+								message = line;
 								continue;
 							} else {
 								String[] parts = line.split(",");
@@ -255,7 +254,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 					if (debug) {
 						Log.d(TAG, "Transmitting stack trace: " + TextUtils.join("\n", stack));
 					}
-					stackInfos.add(new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, stack));
+					stackInfos.add(new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, stack));
 				}
 				stackInfoSender.submitStackInfos(stackInfos, packageName);
 			}
@@ -300,6 +299,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 	}
 
 	// Default exception handler
+	@Override
 	public void uncaughtException(Thread t, Throwable e) {
 		try {
 			File dir = new File(mFilePath);

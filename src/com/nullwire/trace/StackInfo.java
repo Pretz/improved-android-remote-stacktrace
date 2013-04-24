@@ -14,15 +14,17 @@ public class StackInfo {
 	private final String mAndroidVersion;
 	private final String mExceptionType;
 	private final String mThreadName;
-	private List<StackTraceElement> mStacktrace;
+	private final String mMessage;
+	private final List<StackTraceElement> mStacktrace;
 	
 	public StackInfo(String packageVersion, String phoneModel,
-			String androidVersion, String exceptionType, String threadName, List<StackTraceElement> stacktrace) {
+			String androidVersion, String exceptionType, String threadName, String message, List<StackTraceElement> stacktrace) {
 		super();
 		mPackageVersion = packageVersion;
 		mPhoneModel = phoneModel;
 		mAndroidVersion = androidVersion;
 		mThreadName = threadName;
+		mMessage = message;
 		mStacktrace = stacktrace;
 		mExceptionType = exceptionType;
 	}
@@ -68,5 +70,13 @@ public class StackInfo {
 	 */
 	public String getExceptionType() {
 		return mExceptionType;
+	}
+
+	/**
+	 * Returns the Message associated with this stack, usually from {@link Throwable#getMessage()}
+	 * @return a string message summarizing the overall fault
+	 */
+	public String getMessage() {
+		return mMessage;
 	}
 }
