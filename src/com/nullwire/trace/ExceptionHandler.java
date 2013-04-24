@@ -221,8 +221,12 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 					try {
 						String line = null;
 						while ((line = input.readLine()) != null) {
+							if (debug) {
+								Log.d(TAG, "Line -" + line);
+							}
 							if (!currentVersion) {
 								currentVersion = CURRENT_VERSION.equals(line);
+								continue;
 							}
 							if (!currentVersion) {
 								Log.i(TAG, "file did not contain valid version" + line);
@@ -334,6 +338,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 			printWriter.print("\n");
 			printWriter.print(e.getClass().getCanonicalName());
 			printWriter.print("\n");
+			printWriter.println(t.getName());
 			printWriter.println(e.getClass().getName() + " : " + e.getMessage());
 			for (StackTraceElement element : e.getStackTrace()) {
 				printWriter.println(TextUtils.join(",", new String[] { 
