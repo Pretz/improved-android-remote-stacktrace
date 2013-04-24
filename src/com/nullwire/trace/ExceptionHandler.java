@@ -77,6 +77,7 @@ import java.util.ArrayList;
  */
 public class ExceptionHandler implements UncaughtExceptionHandler {
 
+	private static final String CURRENT_VERSION = "VERSION1";
 	private final UncaughtExceptionHandler mDefaultExceptionHandler;
 	private final String mFilePath;
 	private final String mAppVersion;
@@ -221,7 +222,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 						String line = null;
 						while ((line = input.readLine()) != null) {
 							if (!currentVersion) {
-								currentVersion = "VERSION1".equals(line);
+								currentVersion = CURRENT_VERSION.equals(line);
 							}
 							if (!currentVersion) {
 								Log.i(TAG, "file did not contain valid version" + line);
@@ -326,7 +327,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 			// Write the stacktrace to disk
 			FileOutputStream stream = new FileOutputStream(file);
 			final PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(stream));
-			printWriter.println("VERSION1");
+			printWriter.println(CURRENT_VERSION);
 			printWriter.print(android.os.Build.MODEL);
 			printWriter.print("\n");
 			printWriter.print(android.os.Build.VERSION.RELEASE);
