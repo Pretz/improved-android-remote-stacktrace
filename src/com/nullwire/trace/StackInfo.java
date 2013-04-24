@@ -9,18 +9,20 @@ import java.util.List;
  */
 public class StackInfo {
 	
-	private String mPackageVersion;
-	private String mPhoneModel;
-	private String mAndroidVersion;
-	private String mExceptionType;
-	private List<String> mStacktrace;
+	private final String mPackageVersion;
+	private final String mPhoneModel;
+	private final String mAndroidVersion;
+	private final String mExceptionType;
+	private final String mThreadName;
+	private List<StackTraceElement> mStacktrace;
 	
 	public StackInfo(String packageVersion, String phoneModel,
-			String androidVersion, String exceptionType, List<String> stacktrace) {
+			String androidVersion, String exceptionType, String threadName, List<StackTraceElement> stacktrace) {
 		super();
 		mPackageVersion = packageVersion;
 		mPhoneModel = phoneModel;
 		mAndroidVersion = androidVersion;
+		mThreadName = threadName;
 		mStacktrace = stacktrace;
 		mExceptionType = exceptionType;
 	}
@@ -49,10 +51,18 @@ public class StackInfo {
 	/**
 	 * The separate lines of the stacktrace as a list of strings.
 	 */
-	public List<String> getStacktrace() {
+	public List<StackTraceElement> getStacktrace() {
 		return mStacktrace;
 	}
-	
+
+	/**
+	 * Gets the name of the thread that this StackInfo is for.
+	 * @return a String name of the thread, as retrieved by {@link Thread#getName()}
+	 */
+	public String getThreadName() {
+		return mThreadName;
+	}
+
 	/**
 	 * The type of the topmost exception as a fully qualified name, such as <code>java.lang.RuntimeException</code>.
 	 */

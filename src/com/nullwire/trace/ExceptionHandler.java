@@ -35,6 +35,7 @@ package com.nullwire.trace;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.Resources.Theme;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -209,14 +210,24 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 						Log.d(TAG, "Stacktrace in file '" + filePath + "' belongs to version " + version);
 					}
 					// Read contents of stacktrace
-					ArrayList<String> stack = new ArrayList<String>(10);
+					ArrayList<StackTraceElement> stack = new ArrayList<StackTraceElement>(10);
 					BufferedReader input =  new BufferedReader(new FileReader(filePath));
 					String phoneModel = null;
 					String buildVersion = null;
 					String exceptionType = null;
+					String thread = null;
+					String reason = null;
+					boolean currentVersion = false;
 					try {
 						String line = null;
 						while ((line = input.readLine()) != null) {
+							if (!currentVersion) {
+								currentVersion = "VERSION1".equals(line);
+							}
+							if (!currentVersion) {
+								Log.i(TAG, "file did not contain valid version" + line);
+								return;
+							}
 							if (phoneModel == null) {
 								phoneModel = line;
 								continue;
@@ -226,8 +237,16 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 							} else if (exceptionType == null) {
 								exceptionType = line;
 								continue;
+							} else if (thread == null) {
+								thread = line;
+								continue;
+							} else if (reason == null) {
+								reason = line;
+								continue;
 							} else {
-								stack.add(line);								
+								String[] parts = line.split(",");
+								StackTraceElement element = new StackTraceElement(parts[0], parts[1], parts[2], Integer.valueOf(parts[3]));
+								stack.add(element);
 							}
 						}
 					} finally {
@@ -236,7 +255,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 					if (debug) {
 						Log.d(TAG, "Transmitting stack trace: " + TextUtils.join("\n", stack));
 					}
-					stackInfos.add(new StackInfo(version, phoneModel, buildVersion, exceptionType, stack));
+					stackInfos.add(new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, stack));
 				}
 				stackInfoSender.submitStackInfos(stackInfos, packageName);
 			}
@@ -307,13 +326,21 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 			// Write the stacktrace to disk
 			FileOutputStream stream = new FileOutputStream(file);
 			final PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(stream));
+			printWriter.println("VERSION1");
 			printWriter.print(android.os.Build.MODEL);
 			printWriter.print("\n");
 			printWriter.print(android.os.Build.VERSION.RELEASE);
 			printWriter.print("\n");
 			printWriter.print(e.getClass().getCanonicalName());
 			printWriter.print("\n");
-			e.printStackTrace(printWriter);
+			printWriter.println(e.getClass().getName() + " : " + e.getMessage());
+			for (StackTraceElement element : e.getStackTrace()) {
+				printWriter.println(TextUtils.join(",", new String[] { 
+				element.getClassName(),
+				element.getMethodName(),
+				element.getFileName(),
+				String.valueOf(element.getLineNumber())}));
+			}
 			printWriter.flush();
 			stream.getFD().sync();
 			// Close up everything
