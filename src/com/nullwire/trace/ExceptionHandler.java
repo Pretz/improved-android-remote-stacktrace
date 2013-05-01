@@ -250,15 +250,12 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 							if (TextUtils.equals(NESTED_SET, line)) {
 								hasCause = true;
 								message = exceptionType = null;
-								Log.e(TAG, "NESTED MARKER FOUND");
 								continue;
 							}
 							if (currentInfo == null) {
-								Log.e(TAG, "ROOT EXCEPTION for," + exceptionType);
 								rootInfo = currentInfo = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<StackTraceElement>());
 							}
 							if (hasCause) {
-								Log.e(TAG, "CREATING CAUSE cause, " + exceptionType);
 								StackInfo cause = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<StackTraceElement>());
 								currentInfo.addCause(cause);
 								currentInfo = cause;
