@@ -3,6 +3,5 @@
       package="com.nullwire.trace"
       android:versionCode="1"
       android:versionName="1.0">
-    <application android:label="android-remote-stacktrace-improved">
-    </application>
+    <application/>
 </manifest> 

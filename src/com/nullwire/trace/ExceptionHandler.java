@@ -77,6 +77,8 @@ import java.util.ArrayList;
  */
 public class ExceptionHandler implements UncaughtExceptionHandler {
 
+	private static final String CURRENT_VERSION = "VERSION1";
+	private static final String NESTED_SET = "===CAUSED_BY===";
 	private final UncaughtExceptionHandler mDefaultExceptionHandler;
 	private final String mFilePath;
 	private final String mAppVersion;
@@ -168,7 +170,13 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 		File dir = new File(filePath + "/");
 		// Try to create the files folder if it doesn't exist
 		dir.mkdirs();
-		return (stackTraceFileList = dir.list());
+		stackTraceFileList = dir.list();
+		if (stackTraceFileList == null) {
+			// In the cases where reading the dir fails
+			// assume there are no stack traces
+			stackTraceFileList = new String[0];
+		}
+		return stackTraceFileList;
 	}
 
 	/**
@@ -202,15 +210,27 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 					if (debug) {
 						Log.d(TAG, "Stacktrace in file '" + filePath + "' belongs to version " + version);
 					}
-					// Read contents of stacktrace
-					ArrayList<String> stack = new ArrayList<String>(10);
 					BufferedReader input =  new BufferedReader(new FileReader(filePath));
 					String phoneModel = null;
 					String buildVersion = null;
 					String exceptionType = null;
+					String thread = null;
+					String message = null;
+					boolean currentVersion = false;
+					boolean hasCause = false;
+					StackInfo rootInfo = null;
+					StackInfo currentInfo = null;
 					try {
 						String line = null;
 						while ((line = input.readLine()) != null) {
+							if (!currentVersion) {
+								currentVersion = CURRENT_VERSION.equals(line);
+								continue;
+							}
+							if (!currentVersion) {
+								Log.i(TAG, "file did not contain valid version" + line);
+								return;
+							}
 							if (phoneModel == null) {
 								phoneModel = line;
 								continue;
@@ -220,17 +240,38 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 							} else if (exceptionType == null) {
 								exceptionType = line;
 								continue;
-							} else {
-								stack.add(line);								
+							} else if (thread == null) {
+								thread = line;
+								continue;
+							} else if (message == null) {
+								message = line;
+								continue;
 							}
+							if (TextUtils.equals(NESTED_SET, line)) {
+								hasCause = true;
+								message = exceptionType = null;
+								continue;
+							}
+							if (currentInfo == null) {
+								rootInfo = currentInfo = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<StackTraceElement>());
+							}
+							if (hasCause) {
+								StackInfo cause = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<StackTraceElement>());
+								currentInfo.addCause(cause);
+								currentInfo = cause;
+								hasCause = false;
+							}
+							String[] parts = line.split(",");
+							StackTraceElement element = new StackTraceElement(parts[0], parts[1], parts[2], Integer.valueOf(parts[3]));
+							currentInfo.getStacktrace().add(element);
 						}
 					} finally {
 						input.close();
 					}
 					if (debug) {
-						Log.d(TAG, "Transmitting stack trace: " + TextUtils.join("\n", stack));
+						Log.d(TAG, "Transmitting stack trace: " + TextUtils.join("\n", rootInfo.getStacktrace()));
 					}
-					stackInfos.add(new StackInfo(version, phoneModel, buildVersion, exceptionType, stack));
+					stackInfos.add(rootInfo);
 				}
 				stackInfoSender.submitStackInfos(stackInfos, packageName);
 			}
@@ -275,13 +316,14 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 	}
 
 	// Default exception handler
-	public void uncaughtException(Thread t, Throwable e) {
+	@Override
+	public void uncaughtException(final Thread thread, final Throwable exception) {
 		try {
 			File dir = new File(mFilePath);
 			if (dir.list().length > 20) {
 				// Too many stacks, skip
 				if (mDefaultExceptionHandler != null) {
-					mDefaultExceptionHandler.uncaughtException(t, e);
+					mDefaultExceptionHandler.uncaughtException(thread, exception);
 				}
 				return;
 			}
@@ -301,19 +343,36 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 			// Write the stacktrace to disk
 			FileOutputStream stream = new FileOutputStream(file);
 			final PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(stream));
+			printWriter.println(CURRENT_VERSION);
 			printWriter.print(android.os.Build.MODEL);
 			printWriter.print("\n");
 			printWriter.print(android.os.Build.VERSION.RELEASE);
 			printWriter.print("\n");
-			printWriter.print(e.getClass().getCanonicalName());
+			printWriter.print(exception.getClass().getCanonicalName());
 			printWriter.print("\n");
-			e.printStackTrace(printWriter);
-			printWriter.flush();
+			printWriter.println(thread.getName());
+			Throwable throwable = exception;
+			do {
+				printWriter.println(throwable.getClass().getName() + " : " + throwable.getMessage());
+				for (StackTraceElement element : throwable.getStackTrace()) {
+					printWriter.println(TextUtils.join(",", new String[] {
+							element.getClassName(),
+							element.getMethodName(),
+							element.getFileName(),
+							String.valueOf(element.getLineNumber())}));
+				}
+				throwable = throwable.getCause();
+				if (throwable != null) {
+					printWriter.println(NESTED_SET);
+					printWriter.println(throwable.getClass().getCanonicalName());
+				}
+				printWriter.flush();
+			} while(throwable != null);
 			stream.getFD().sync();
 			// Close up everything
 			printWriter.close();
 			if (mDebug) {
-				Log.d(TAG, "saved stacktrace to file", e);
+				Log.d(TAG, "saved stacktrace to file", exception);
 			}
 		} catch (Exception ebos) {
 			// Nothing much we can do about this - the game is over
@@ -321,7 +380,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 		}
 		// Call original handler
 		if (mDefaultExceptionHandler != null) {
-			mDefaultExceptionHandler.uncaughtException(t, e);
+			mDefaultExceptionHandler.uncaughtException(thread, exception);
 		}
 	}
 }

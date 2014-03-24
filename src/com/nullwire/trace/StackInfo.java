@@ -9,18 +9,23 @@ import java.util.List;
  */
 public class StackInfo {
 	
-	private String mPackageVersion;
-	private String mPhoneModel;
-	private String mAndroidVersion;
-	private String mExceptionType;
-	private List<String> mStacktrace;
+	private final String mPackageVersion;
+	private final String mPhoneModel;
+	private final String mAndroidVersion;
+	private final String mExceptionType;
+	private final String mThreadName;
+	private final String mMessage;
+	private final List<StackTraceElement> mStacktrace;
+	private StackInfo mCause;
 	
 	public StackInfo(String packageVersion, String phoneModel,
-			String androidVersion, String exceptionType, List<String> stacktrace) {
+			String androidVersion, String exceptionType, String threadName, String message, List<StackTraceElement> stacktrace) {
 		super();
 		mPackageVersion = packageVersion;
 		mPhoneModel = phoneModel;
 		mAndroidVersion = androidVersion;
+		mThreadName = threadName;
+		mMessage = message;
 		mStacktrace = stacktrace;
 		mExceptionType = exceptionType;
 	}
@@ -49,14 +54,38 @@ public class StackInfo {
 	/**
 	 * The separate lines of the stacktrace as a list of strings.
 	 */
-	public List<String> getStacktrace() {
+	public List<StackTraceElement> getStacktrace() {
 		return mStacktrace;
 	}
-	
+
+	/**
+	 * Gets the name of the thread that this StackInfo is for.
+	 * @return a String name of the thread, as retrieved by {@link Thread#getName()}
+	 */
+	public String getThreadName() {
+		return mThreadName;
+	}
+
 	/**
 	 * The type of the topmost exception as a fully qualified name, such as <code>java.lang.RuntimeException</code>.
 	 */
 	public String getExceptionType() {
 		return mExceptionType;
+	}
+
+	/**
+	 * Returns the Message associated with this stack, usually from {@link Throwable#getMessage()}
+	 * @return a string message summarizing the overall fault
+	 */
+	public String getMessage() {
+		return mMessage;
+	}
+
+	public StackInfo getCause() {
+		return mCause;
+	}
+
+	void addCause(StackInfo info) {
+		mCause = info;
 	}
 }
