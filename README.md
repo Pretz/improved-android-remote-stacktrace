@@ -1,5 +1,6 @@
 Android Remote Stacktrace: Improved
 ===================================
+[![Badge](http://www.libtastic.com/static/osbadges/118.png)](http://www.libtastic.com/technology/118/)
 
 This project is fork of [Android Remote Stacktrace][1] which adds a number of important features:
 
