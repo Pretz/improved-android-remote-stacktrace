@@ -8,3 +8,6 @@ build/*
 */build/*
 gen
 bin
+*.iml
+*/*.iml
+local.properties
