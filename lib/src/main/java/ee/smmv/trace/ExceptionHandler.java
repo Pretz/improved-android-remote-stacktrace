@@ -30,7 +30,7 @@ Peter Hewitt
 Alex Pretzlav, alex@turnlav.net
 */
 
-package com.nullwire.trace;
+package ee.smmv.trace;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;

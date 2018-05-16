@@ -1,4 +1,4 @@
-package com.nullwire.trace;
+package ee.smmv.trace;
 
 import java.util.List;
 
@@ -8,7 +8,7 @@ import java.util.List;
  *
  */
 public class StackInfo {
-	
+
 	private final String mPackageVersion;
 	private final String mPhoneModel;
 	private final String mAndroidVersion;
@@ -17,7 +17,7 @@ public class StackInfo {
 	private final String mMessage;
 	private final List<StackTraceElement> mStacktrace;
 	private StackInfo mCause;
-	
+
 	public StackInfo(String packageVersion, String phoneModel,
 			String androidVersion, String exceptionType, String threadName, String message, List<StackTraceElement> stacktrace) {
 		super();
@@ -29,28 +29,28 @@ public class StackInfo {
 		mStacktrace = stacktrace;
 		mExceptionType = exceptionType;
 	}
-	
+
 	/**
 	 * The version string of the application at the time of the crash.
 	 */
 	public String getPackageVersion() {
 		return mPackageVersion;
 	}
-	
+
 	/**
 	 * The phone model as set in <code>android.os.Build.MODEL</code>.
 	 */
 	public String getPhoneModel() {
 		return mPhoneModel;
 	}
-	
+
 	/**
 	 * The version of android as stored in <code>android.os.Build.VERSION.RELEASE</code> at the time of crash.
 	 */
 	public String getAndroidVersion() {
 		return mAndroidVersion;
 	}
-	
+
 	/**
 	 * The separate lines of the stacktrace as a list of strings.
 	 */
@@ -88,4 +88,5 @@ public class StackInfo {
 	void addCause(StackInfo info) {
 		mCause = info;
 	}
+
 }

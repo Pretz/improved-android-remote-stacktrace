@@ -1,4 +1,4 @@
-package com.nullwire.trace;
+package ee.smmv.trace;
 
 import android.os.AsyncTask;
 import android.text.TextUtils;
@@ -37,11 +37,11 @@ import java.util.List;
  *
  */
 public class HttpPostStackInfoSender implements StackInfoSender {
-	
+
 	private static final String TAG = "HttpPostStackInfoSender";
-	
+
 	private final String mPostUrl;
-	
+
 	/**
 	 * Construct a new HttpPostStackInfoSender that will submit
 	 * stack traces by POSTing them to postUrl.
@@ -49,10 +49,10 @@ public class HttpPostStackInfoSender implements StackInfoSender {
 	public HttpPostStackInfoSender(String postUrl) {
 		mPostUrl = postUrl;
 	}
-	
+
 	public void submitStackInfos(Collection<StackInfo> stackInfos, final String packageName) {
 		new AsyncTask<StackInfo, Void, Void>() {
-			
+
 			@Override
 			protected Void doInBackground(StackInfo... infos) {
 				final DefaultHttpClient httpClient = new DefaultHttpClient(); 

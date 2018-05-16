@@ -3,5 +3,8 @@
 .classpath
 .project
 .idea/*
+.gradle/*
+build/*
+*/build/*
 gen
 bin
