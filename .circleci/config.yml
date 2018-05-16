@@ -9,6 +9,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Make gradle wrapper executable
+          command: chmod +x gradlew
+      - run:
           name: Debug
           command: ./gradlew assembleDebug
       - store_artifacts:
