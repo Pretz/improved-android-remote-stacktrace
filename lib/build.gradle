@@ -1,5 +1,7 @@
 apply plugin: 'com.android.library'
 
+group = 'com.github.somemove'
+
 android {
 	compileSdkVersion 19
 	buildToolsVersion "27.0.3"
@@ -13,6 +15,11 @@ android {
 
 	lintOptions {
 		abortOnError false
+	}
+
+	compileOptions {
+		sourceCompatibility JavaVersion.VERSION_1_8
+		targetCompatibility JavaVersion.VERSION_1_8
 	}
 
 	buildTypes {
