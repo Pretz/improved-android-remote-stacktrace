@@ -1,3 +1,5 @@
+[![](https://jitpack.io/v/somemove/android-remote-stacktrace-logger.svg)](https://jitpack.io/#somemove/android-remote-stacktrace-logger) [![CircleCI](https://circleci.com/gh/somemove/android-remote-stacktrace-logger.svg?style=svg)](https://circleci.com/gh/somemove/android-remote-stacktrace-logger)
+
 Android Remote Stacktrace: Improved
 ===================================
 
