@@ -1,0 +1,23 @@
+buildscript {
+	ext {
+		android_tools_version = '3.0.0'
+	}
+
+	repositories {
+		jcenter()
+		mavenCentral()
+		google()
+	}
+
+	dependencies {
+		classpath "com.android.tools.build:gradle:$android_tools_version"
+	}
+}
+
+allprojects {
+	repositories {
+		jcenter()
+		mavenCentral()
+		google()
+	}
+}

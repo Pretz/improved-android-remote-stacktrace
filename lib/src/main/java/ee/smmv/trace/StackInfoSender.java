@@ -1,4 +1,4 @@
-package com.nullwire.trace;
+package ee.smmv.trace;
 
 import java.util.Collection;
 
@@ -25,5 +25,5 @@ public interface StackInfoSender {
 	 * the stacktraces.
 	 */
 	public void submitStackInfos(Collection<StackInfo> stackInfos, String packageName);
-	
+
 }

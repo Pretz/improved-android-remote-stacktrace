@@ -1,5 +1,9 @@
+[![](https://jitpack.io/v/somemove/android-remote-stacktrace-logger.svg)](https://jitpack.io/#somemove/android-remote-stacktrace-logger) [![CircleCI](https://circleci.com/gh/somemove/android-remote-stacktrace-logger.svg?style=svg)](https://circleci.com/gh/somemove/android-remote-stacktrace-logger)
+
 Android Remote Stacktrace: Improved
 ===================================
+
+**This project has been forked to carry on maintenance.** We thank Alexander Pretzlav for keeping the original code and improvements.
 
 This project is fork of [Android Remote Stacktrace][1] which adds a number of important features:
 

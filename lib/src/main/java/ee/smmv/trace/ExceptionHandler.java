@@ -1,36 +1,4 @@
-/*
-Copyright (c) 2009 nullwire aps
-
-Permission is hereby granted, free of charge, to any person
-obtaining a copy of this software and associated documentation
-files (the "Software"), to deal in the Software without
-restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
-
-Contributors: 
-Mads Kristiansen, mads.kristiansen@nullwire.com
-Glen Humphrey
-Evan Charlton
-Peter Hewitt
-Alex Pretzlav, alex@turnlav.net
-*/
-
-package com.nullwire.trace;
+package ee.smmv.trace;
 
 import android.content.Context;
 import android.content.pm.PackageInfo;
@@ -73,6 +41,7 @@ import java.util.ArrayList;
  * <li>Evan Charlton
  * <li>Peter Hewitt
  * <li>Alex Pretzlav, alex@turnlav.net
+ * <li>Josef Petrak, josef.petrak@somemove.ee
  * </ul>
  */
 public class ExceptionHandler implements UncaughtExceptionHandler {
@@ -84,7 +53,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 	private final String mAppVersion;
 	private final boolean mDebug;
 
-	private static final String TAG = "CollectingExceptionHandler";
+	private static final String TAG = ExceptionHandler.class.getSimpleName();
 
 	private static String[] stackTraceFileList = null;
 	
@@ -97,7 +66,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 	 * @return
 	 */
 	public static boolean register(Context context, String url) {
-		return register(context, new HttpPostStackInfoSender(url), false);
+		return register(context, new HttpPostStackInfoSender(url), new DefaultMetadataExtractor(), false);
 	}
 
 	/**
@@ -114,7 +83,10 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 	 *
 	 * @author pretz/android-remote-stacktrace
 	 */
-	public static boolean register(Context context, final StackInfoSender stackInfoSender, final boolean debug) {
+	public static boolean register(Context context, final StackInfoSender stackInfoSender, final MetadataExtractor metadataExtractor, final boolean debug) {
+		Log.d(TAG, "Setting context into metadata extractor");
+		metadataExtractor.setContext(context);
+
 		Log.i(TAG, "Registering default exceptions handler");
 		// Files dir for storing the stack trace
 		final String filePath = context.getDir("stacktraces", 0).getAbsolutePath();
@@ -135,7 +107,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 
 		// First of all transmit any stack traces that may be lying around
 		// This must be called from the UI thread as it may trigger an analytics flush
-		submitStackTraces(filePath, stackInfoSender, debug, packageInfo.packageName);
+		submitStackTraces(filePath, stackInfoSender, metadataExtractor, debug, packageInfo.packageName);
 
 		new Thread() {
 			@Override
@@ -191,8 +163,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 	 *
 	 * @author pretz/android-remote-stacktrace
 	 */
-	private static void submitStackTraces(String filesPath, StackInfoSender stackInfoSender,
-			boolean debug, String packageName) {
+	private static void submitStackTraces(String filesPath, StackInfoSender stackInfoSender, MetadataExtractor metadataExtractor, boolean debug, String packageName) {
 		try {
 			if (debug) {
 				Log.d(TAG, "Looking for exceptions in: " + filesPath);
@@ -253,10 +224,10 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
 								continue;
 							}
 							if (currentInfo == null) {
-								rootInfo = currentInfo = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<StackTraceElement>());
+								rootInfo = currentInfo = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<>(), metadataExtractor.extract());
 							}
 							if (hasCause) {
-								StackInfo cause = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<StackTraceElement>());
+								StackInfo cause = new StackInfo(version, phoneModel, buildVersion, exceptionType, thread, message, new ArrayList<>(), metadataExtractor.extract());
 								currentInfo.addCause(cause);
 								currentInfo = cause;
 								hasCause = false;

@@ -2,5 +2,12 @@
 .gitignore
 .classpath
 .project
+.idea/*
+.gradle/*
+build/*
+*/build/*
 gen
 bin
+*.iml
+*/*.iml
+local.properties

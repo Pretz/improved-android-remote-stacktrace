@@ -1,4 +1,4 @@
-package com.nullwire.trace;
+package ee.smmv.trace;
 
 import android.os.AsyncTask;
 import android.text.TextUtils;
@@ -17,6 +17,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A StackInfoSender that performs an individual http POST to a URL for each
@@ -34,14 +35,14 @@ import java.util.List;
  * </ul>
  * 
  * @author pretz
- *
+ * @author Josef Petrak, josef.petrak@somemove.ee
  */
 public class HttpPostStackInfoSender implements StackInfoSender {
-	
+
 	private static final String TAG = "HttpPostStackInfoSender";
-	
+
 	private final String mPostUrl;
-	
+
 	/**
 	 * Construct a new HttpPostStackInfoSender that will submit
 	 * stack traces by POSTing them to postUrl.
@@ -49,10 +50,9 @@ public class HttpPostStackInfoSender implements StackInfoSender {
 	public HttpPostStackInfoSender(String postUrl) {
 		mPostUrl = postUrl;
 	}
-	
+
 	public void submitStackInfos(Collection<StackInfo> stackInfos, final String packageName) {
 		new AsyncTask<StackInfo, Void, Void>() {
-			
 			@Override
 			protected Void doInBackground(StackInfo... infos) {
 				final DefaultHttpClient httpClient = new DefaultHttpClient(); 
@@ -64,6 +64,9 @@ public class HttpPostStackInfoSender implements StackInfoSender {
                     nvps.add(new BasicNameValuePair("phone_model", info.getPhoneModel()));
                     nvps.add(new BasicNameValuePair("android_version", info.getAndroidVersion()));
                     nvps.add(new BasicNameValuePair("stacktrace", TextUtils.join("\n", info.getStacktrace())));
+                    for (Map.Entry<String, String> entry : info.getCustomMetadata().entrySet()) {
+	                    nvps.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
+                    }
 					try {
 						httpPost.setEntity(new UrlEncodedFormEntity(nvps, HTTP.UTF_8));
 						// We don't care about the response, so we just hope it went well and on with it
