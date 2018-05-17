@@ -1,11 +1,12 @@
 package ee.smmv.trace;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Encapsulates a stacktrace and relevant information about the device and OS when the crash occured.
  * @author pretz
- *
+ * @author Josef Petrak, josef.petrak@somemove.ee
  */
 public class StackInfo {
 
@@ -16,10 +17,11 @@ public class StackInfo {
 	private final String mThreadName;
 	private final String mMessage;
 	private final List<StackTraceElement> mStacktrace;
+	private final Map<String, String> customMetadata;
 	private StackInfo mCause;
 
 	public StackInfo(String packageVersion, String phoneModel,
-			String androidVersion, String exceptionType, String threadName, String message, List<StackTraceElement> stacktrace) {
+			String androidVersion, String exceptionType, String threadName, String message, List<StackTraceElement> stacktrace, Map<String, String> customMetadata) {
 		super();
 		mPackageVersion = packageVersion;
 		mPhoneModel = phoneModel;
@@ -28,6 +30,7 @@ public class StackInfo {
 		mMessage = message;
 		mStacktrace = stacktrace;
 		mExceptionType = exceptionType;
+		this.customMetadata = customMetadata;
 	}
 
 	/**
@@ -89,4 +92,11 @@ public class StackInfo {
 		mCause = info;
 	}
 
+	/**
+	 * Returns extracted app-specific metadata.
+	 * @return Key-value map
+	 */
+	public Map<String, String> getCustomMetadata() {
+		return customMetadata;
+	}
 }
